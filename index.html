@@ -74,50 +74,14 @@
 <div id="all">
   <button onclick="runPageSpeedTest()">開始測試</button>
   <p id="status"></p>
-  <a id="downloadLink" style="display: none;">下載 CSV</a>
+  <a id="downloadLinkXlsx" style="display: none;">下載 XLSX</a>
   <div class="tabs" id="tabs"></div>
   <div id="tabContents"></div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 <script>
 const urls = [
-  "https://www.digiwin.com/tw/blog/10/index/3354.html",
-  "https://www.digiwin.com/tw/blog/8/index/3246.html",
-  "https://www.digiwin.com/tw/ERP/blog_bom",
-  "https://www.digiwin.com/tw/ERP/this-is-erp",
-  "https://www.digiwin.com/tw/software/PLM/index",
-  "https://www.digiwin.com/tw/dsc/solution/WB002839/iso",
-  "https://www.digiwin.com/tw/ERP/blog_wip",
-  "https://www.digiwin.com/tw/dsc/project/digiwinathena/index",
   "https://www.digiwin.com/tw/5GAIOT/#/",
-  "https://www.digiwin.com/tw/",
-  "https://www.digiwin.com/tw/portal/article/index/id/701.html",
-  "https://www.digiwin.com/tw/dsc/project/WB002940/index.html",
-  "https://www.digiwin.com/tw/dsc/OT-IaaS/01_3/",
-  "https://www.digiwin.com/tw/dsc/solution/WB002783/WB00278301.html",
-  "https://www.digiwin.com/tw/dsc/solution/WB002553/WB00255301.html",
-  "https://www.digiwin.com/tw/course.html",
-  "https://www.digiwin.com/tw/case.html",
-  "https://www.digiwin.com/tw/case/3453.html",
-  "https://www.digiwin.com/tw/case/1069.html",
-  "https://www.digiwin.com/tw/aboutdsc.html",
-  "https://www.digiwin.com/tw/contact/eform.html",
-  "https://www.digiwin.com/tw/dsc/OT-OMS/01/CFV.html",
-  "https://www.digiwin.com/tw/dsc/hr/WB003024/CS/#/CS",
-  "https://www.digiwin.com/tw/dsc/hr/WB003024/MT/#/MT",
-  "https://www.digiwin.com/tw/activity.html",
-  "https://www.digiwin.com/tw/activity/3482.html",
-  "https://www.digiwin.com/tw/activity_report.html",
-  "https://www.digiwin.com/tw/activity_report/3177.html",
-  "https://www.digiwin.com/tw/activity_report/1281.html",
-  "https://www.digiwin.com/tw/dsc/project/ESG/index.html",
-  "https://www.digiwin.com/tw/ERP/erp-all.html",
-  "https://www.digiwin.com/tw/dsc/service/WB002736/WB00273601.html",
-  "https://www.digiwin.com/tw/dsc/service/WB002736/WB00273601_repair",
-  "https://www.digiwin.com/tw/video.html",
-  "https://www.digiwin.com/tw/dsc/solution/article/informationsecurity",
-  "https://www.digiwin.com/tw/dsc/project/FRC/index",
-  "https://smarterp.digiwin.com/digiwintw/01/",
-  "https://www.digiwin.com/tw/dsc/solution/WB002972/cloud",
   "https://www.digiwin.com/tw/software/719.html"
 ];
 const apiKey = "AIzaSyD0DQyhQAhUjY94_nr2_K6GQYdf0-rvLpc";
@@ -125,7 +89,7 @@ const statusElement = document.getElementById("status");
 
 async function fetchPageSpeedData(url, index) {
 
-  statusElement.innerText = `處理第 ${index + 1} 筆資料中（${url}）...`;
+  statusElement.innerText = `處理第 ${index + 1} / ${urls.length} 筆資料中（${url}）...`;
   
   const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=mobile&key=${apiKey}`;
   try {
@@ -246,26 +210,46 @@ async function runPageSpeedTest() {
   }
 
   // 激活第一個頁籤
-  if (results.length > 0) {
-    document.querySelector('.tab-button').classList.add('active');
-    document.querySelector('.tab').classList.add('active');
-  }
+  // if (results.length > 0) {
+  //   document.querySelector('.tab-button').classList.add('active');
+  //   document.querySelector('.tab').classList.add('active');
+  // }
 
-  // 轉換成 CSV 格式
-  let csvContent = "data:text/csv;charset=utf-8,URL,Performance,LCP,FCP,INP,TTFB,Speed Index\n";
-  results.forEach(({ url, performanceScore, lcp, fcp, inp, ttfb, speedIndex }) => {
-    csvContent += `"${url}",${performanceScore},${lcp},${fcp},${inp},${ttfb},${speedIndex}\n`;
-  });
+  // 格式化 JSON 結果
+  const formattedResults = results.map(result => ({
+    url: result.url,
+    Performance: result.performanceScore,
+    LCP: result.lcp,
+    FCP: result.fcp,
+    INP: result.inp,
+    TTFB: result.ttfb,
+    speedIndex: result.speedIndex
+  }));
+
+  // 轉換成 JSON 格式
+  // const jsonContent = JSON.stringify(formattedResults, null, 2);
+  // const jsonBlob = new Blob([jsonContent], { type: "application/json" });
+  // const jsonUrl = URL.createObjectURL(jsonBlob);
+
+
+  // const jsonFile = new File([jsonBlob], "./pagespeed_results.json", { type: "application/json" });
+  // const jsonFileUrl = URL.createObjectURL(jsonFile);
+
+  // 轉換成 XLSX 格式
+  const worksheet = XLSX.utils.json_to_sheet(formattedResults);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Results");
+  const xlsxBlob = new Blob([XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const xlsxUrl = URL.createObjectURL(xlsxBlob);
 
   statusElement.innerText = "處理完成！";
 
   // 下載連結
-  const encodedUri = encodeURI(csvContent);
-  const downloadLink = document.getElementById("downloadLink");
-  downloadLink.setAttribute("href", encodedUri);
-  downloadLink.setAttribute("download", "pagespeed_results.csv");
-  downloadLink.style.display = "block";
-  downloadLink.innerText = "下載 CSV";
+  const downloadLinkXlsx = document.getElementById("downloadLinkXlsx");
+  downloadLinkXlsx.setAttribute("href", xlsxUrl);
+  downloadLinkXlsx.setAttribute("download", "pagespeed_results.xlsx");
+  downloadLinkXlsx.style.display = "block";
+  downloadLinkXlsx.innerText = "下載 XLSX";
 }
 </script>
 </body>
